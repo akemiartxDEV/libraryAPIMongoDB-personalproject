@@ -121,3 +121,4 @@ Este repositório é público. Senhas e dados de conexão sensíveis **não** de
 ## Autoria
 
 Projeto pessoal de estudo, desenvolvido passo a passo com o objetivo de aprender e documentar cada etapa.
+Estou fazendo uso do Claude para prosseguir com a programação da API.
