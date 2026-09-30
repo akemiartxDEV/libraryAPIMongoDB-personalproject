@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from pymongo import MongoClient
+from pydantic import BaseModel
 
 app = FastAPI(
     title="API Biblioteca",
@@ -24,3 +25,17 @@ def listar_livros():
         livro["_id"] = str(livro["_id"])
         lista.append(livro)
     return lista
+
+class LivroNovo(BaseModel):
+    titulo: str
+    autor: str
+    ano: int
+    exemplares: int = 1
+
+
+@app.post("/livros", status_code=201)
+def cadastrar_livro(livro: LivroNovo):
+    documento = livro.model_dump()
+    documento["disponivel"] = documento["exemplares"] > 0
+    resultado = livros.insert_one(documento)
+    return {"mensagem": "Livro cadastrado com sucesso", "id": str(resultado.inserted_id)}
