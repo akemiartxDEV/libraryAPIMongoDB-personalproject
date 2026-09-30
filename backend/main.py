@@ -1,8 +1,9 @@
 from fastapi import FastAPI, HTTPException
 from pymongo import MongoClient
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from bson import ObjectId
 from bson.errors import InvalidId
+from typing import Optional
 
 app = FastAPI(
     title="API Biblioteca",
@@ -13,7 +14,6 @@ app = FastAPI(
 cliente = MongoClient("mongodb://localhost:27017")
 banco = cliente["biblioteca"]
 livros = banco["livros"]
-
 
 @app.get("/")
 def raiz():
@@ -53,5 +53,34 @@ def buscar_livro(livro_id: str):
     if livro is None:
         raise HTTPException(status_code=404, detail="Livro não encontrado")
 
+    livro["_id"] = str(livro["_id"])
+    return livro
+
+class LivroAtualizacao(BaseModel):
+    titulo: Optional[str] = None
+    autor: Optional[str] = None
+    ano: Optional[int] = None
+    exemplares: Optional[int] = Field(default=None, ge=0)
+
+
+@app.patch("/livros/{livro_id}")
+def atualizar_livro(livro_id: str, dados: LivroAtualizacao):
+    try:
+        objeto_id = ObjectId(livro_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
+    campos = dados.model_dump(exclude_unset=True, exclude_none=True)
+    if not campos:
+        raise HTTPException(status_code=400, detail="Nenhum campo enviado para atualizar")
+
+    if "exemplares" in campos:
+        campos["disponivel"] = campos["exemplares"] > 0
+
+    resultado = livros.update_one({"_id": objeto_id}, {"$set": campos})
+    if resultado.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Livro não encontrado")
+
+    livro = livros.find_one({"_id": objeto_id})
     livro["_id"] = str(livro["_id"])
     return livro
