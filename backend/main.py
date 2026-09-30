@@ -84,3 +84,16 @@ def atualizar_livro(livro_id: str, dados: LivroAtualizacao):
     livro = livros.find_one({"_id": objeto_id})
     livro["_id"] = str(livro["_id"])
     return livro
+
+@app.delete("/livros/{livro_id}")
+def remover_livro(livro_id: str):
+    try:
+        objeto_id = ObjectId(livro_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
+    resultado = livros.delete_one({"_id": objeto_id})
+    if resultado.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Livro não encontrado")
+
+    return {"mensagem": "Livro removido com sucesso"}
