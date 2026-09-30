@@ -1,6 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from pymongo import MongoClient
 from pydantic import BaseModel
+from bson import ObjectId
+from bson.errors import InvalidId
 
 app = FastAPI(
     title="API Biblioteca",
@@ -39,3 +41,17 @@ def cadastrar_livro(livro: LivroNovo):
     documento["disponivel"] = documento["exemplares"] > 0
     resultado = livros.insert_one(documento)
     return {"mensagem": "Livro cadastrado com sucesso", "id": str(resultado.inserted_id)}
+
+@app.get("/livros/{livro_id}")
+def buscar_livro(livro_id: str):
+    try:
+        objeto_id = ObjectId(livro_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
+    livro = livros.find_one({"_id": objeto_id})
+    if livro is None:
+        raise HTTPException(status_code=404, detail="Livro não encontrado")
+
+    livro["_id"] = str(livro["_id"])
+    return livro
