@@ -15,6 +15,12 @@ cliente = MongoClient("mongodb://localhost:27017")
 banco = cliente["biblioteca"]
 livros = banco["livros"]
 
+def converter_id(livro_id: str) -> ObjectId:
+    try:
+        return ObjectId(livro_id)
+    except InvalidId:
+        raise HTTPException(status_code=400, detail="ID inválido")
+
 @app.get("/")
 def raiz():
     return {"mensagem": "API da biblioteca funcionando"}
@@ -44,10 +50,7 @@ def cadastrar_livro(livro: LivroNovo):
 
 @app.get("/livros/{livro_id}")
 def buscar_livro(livro_id: str):
-    try:
-        objeto_id = ObjectId(livro_id)
-    except InvalidId:
-        raise HTTPException(status_code=400, detail="ID inválido")
+    objeto_id = converter_id(livro_id)
 
     livro = livros.find_one({"_id": objeto_id})
     if livro is None:
@@ -65,10 +68,7 @@ class LivroAtualizacao(BaseModel):
 
 @app.patch("/livros/{livro_id}")
 def atualizar_livro(livro_id: str, dados: LivroAtualizacao):
-    try:
-        objeto_id = ObjectId(livro_id)
-    except InvalidId:
-        raise HTTPException(status_code=400, detail="ID inválido")
+    objeto_id = converter_id(livro_id)
 
     campos = dados.model_dump(exclude_unset=True, exclude_none=True)
     if not campos:
@@ -87,10 +87,7 @@ def atualizar_livro(livro_id: str, dados: LivroAtualizacao):
 
 @app.delete("/livros/{livro_id}")
 def remover_livro(livro_id: str):
-    try:
-        objeto_id = ObjectId(livro_id)
-    except InvalidId:
-        raise HTTPException(status_code=400, detail="ID inválido")
+    objeto_id = converter_id(livro_id)
 
     resultado = livros.delete_one({"_id": objeto_id})
     if resultado.deleted_count == 0:
