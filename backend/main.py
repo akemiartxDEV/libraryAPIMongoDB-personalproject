@@ -4,6 +4,8 @@ from pydantic import BaseModel, Field
 from bson import ObjectId
 from bson.errors import InvalidId
 from typing import Optional
+from datetime import datetime, timezone
+from pydantic import BaseModel, Field, ConfigDict
 
 app = FastAPI(
     title="API Biblioteca",
@@ -14,6 +16,7 @@ app = FastAPI(
 cliente = MongoClient("mongodb://localhost:27017")
 banco = cliente["biblioteca"]
 livros = banco["livros"]
+usuarios = banco["usuarios"]
 
 def converter_id(livro_id: str) -> ObjectId:
     try:
@@ -94,3 +97,34 @@ def remover_livro(livro_id: str):
         raise HTTPException(status_code=404, detail="Livro não encontrado")
 
     return {"mensagem": "Livro removido com sucesso"}
+
+class UsuarioNovo(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+    
+    nome: str = Field(min_length=1, max_length=100)
+    email: str = Field(min_length=3, max_length=100)
+
+
+@app.post("/usuarios", status_code=201)
+def cadastrar_usuario(usuario: UsuarioNovo):
+    email = usuario.email.strip().lower()
+
+    if usuarios.find_one({"email": email}):
+        raise HTTPException(status_code=409, detail="Já existe um usuário com esse e-mail")
+
+    documento = {
+        "nome": usuario.nome.strip(),
+        "email": email,
+        "data_cadastro": datetime.now(timezone.utc),
+    }
+    resultado = usuarios.insert_one(documento)
+    return {"mensagem": "Usuário cadastrado com sucesso", "id": str(resultado.inserted_id)}
+
+
+@app.get("/usuarios")
+def listar_usuarios():
+    lista = []
+    for usuario in usuarios.find():
+        usuario["_id"] = str(usuario["_id"])
+        lista.append(usuario)
+    return lista
